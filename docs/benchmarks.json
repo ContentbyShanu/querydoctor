@@ -1,0 +1,3098 @@
+{
+  "environment": {
+    "python": "3.12.3",
+    "platform": "Linux 6.18.44-fc-v180 (x86_64)",
+    "sqlite": "3.45.1",
+    "querydoctor": "1.0.0"
+  },
+  "report": {
+    "version": "1.0.0",
+    "generated_at": "2026-10-28T02:52:34+00:00",
+    "sqlite_version": "3.45.1",
+    "database": "data/shop.db",
+    "database_bytes": 33243136,
+    "duration_s": 178.32,
+    "tables": [
+      {
+        "name": "order_items",
+        "rows": 500000,
+        "columns": [
+          "id",
+          "order_id",
+          "product_id",
+          "quantity",
+          "unit_price_cents"
+        ],
+        "indexes": []
+      },
+      {
+        "name": "orders",
+        "rows": 300000,
+        "columns": [
+          "id",
+          "user_id",
+          "status",
+          "total_cents",
+          "country",
+          "created_at"
+        ],
+        "indexes": []
+      },
+      {
+        "name": "products",
+        "rows": 20000,
+        "columns": [
+          "id",
+          "sku",
+          "name",
+          "category",
+          "brand",
+          "price_cents",
+          "stock"
+        ],
+        "indexes": []
+      },
+      {
+        "name": "reviews",
+        "rows": 100000,
+        "columns": [
+          "id",
+          "product_id",
+          "user_id",
+          "rating",
+          "created_at",
+          "title"
+        ],
+        "indexes": []
+      },
+      {
+        "name": "users",
+        "rows": 100000,
+        "columns": [
+          "id",
+          "email",
+          "name",
+          "country",
+          "plan",
+          "created_at",
+          "is_active"
+        ],
+        "indexes": []
+      }
+    ],
+    "queries": [
+      {
+        "id": "b01",
+        "title": "Customer order history",
+        "sql": "SELECT id, total_cents, created_at FROM orders WHERE user_id = 1 ORDER BY created_at DESC LIMIT 20",
+        "status": "optimized",
+        "message": "1 index recommended: 12 ms to 0.03 ms.",
+        "baseline_ms": 11.806752999973469,
+        "final_ms": 0.03323500004626112,
+        "speedup": 355.25057871337987,
+        "rows_returned": 20,
+        "plan_before": [
+          {
+            "id": 4,
+            "parent": 0,
+            "depth": 0,
+            "detail": "SCAN orders"
+          },
+          {
+            "id": 19,
+            "parent": 0,
+            "depth": 0,
+            "detail": "USE TEMP B-TREE FOR ORDER BY"
+          }
+        ],
+        "plan_after": [
+          {
+            "id": 4,
+            "parent": 0,
+            "depth": 0,
+            "detail": "SEARCH orders USING COVERING INDEX idx_orders_user_id_created_at_total_cents_cov (user_id=?)"
+          }
+        ],
+        "findings_before": [
+          {
+            "kind": "full_scan",
+            "severity": "high",
+            "table": "orders",
+            "message": "Full scan of orders (300,000 rows)."
+          },
+          {
+            "kind": "temp_sort",
+            "severity": "medium",
+            "table": null,
+            "message": "Rows are sorted in a temporary structure."
+          }
+        ],
+        "findings_after": [],
+        "recommendations": [
+          {
+            "rank": 1,
+            "candidate": {
+              "table": "orders",
+              "columns": [
+                "user_id",
+                "created_at",
+                "total_cents"
+              ],
+              "where": null,
+              "kind": "covering",
+              "name": "idx_orders_user_id_created_at_total_cents_cov",
+              "rationale": "Answers the query from the index alone, with no table lookups."
+            },
+            "baseline_ms": 12.069573000076161,
+            "after_ms": 0.03323500004626112,
+            "speedup": 363.1585070942092,
+            "size_bytes": 7938048,
+            "build_ms": 242.99889499991423,
+            "write_overhead": 4.929338225714563,
+            "score": 2.446,
+            "confidence": "medium",
+            "explanation": "Replaces a full scan of orders with a direct search on (user_id, created_at, total_cents). Rows come out already in ORDER BY order, so the temporary sort is gone. The index holds every column the query reads, so the table is not touched. Measured from 12 ms to 0.03 ms (363x faster). Costs 7.6 MB of disk and makes inserts about 493% slower.",
+            "create_sql": "CREATE INDEX idx_orders_user_id_created_at_total_cents_cov ON orders (user_id, created_at, total_cents)",
+            "rollback_sql": "DROP INDEX IF EXISTS idx_orders_user_id_created_at_total_cents_cov"
+          }
+        ],
+        "tested": [
+          {
+            "candidate": {
+              "table": "orders",
+              "columns": [
+                "user_id",
+                "created_at",
+                "total_cents"
+              ],
+              "where": null,
+              "kind": "covering",
+              "name": "idx_orders_user_id_created_at_total_cents_cov",
+              "rationale": "Answers the query from the index alone, with no table lookups."
+            },
+            "status": "recommended",
+            "round": 2,
+            "used_index": true,
+            "baseline_ms": 12.069573000076161,
+            "after_ms": 0.03323500004626112,
+            "speedup": 363.1585070942092,
+            "build_ms": 242.99889499991423,
+            "size_bytes": 7938048,
+            "write_overhead": 4.929338225714563,
+            "results_match": true,
+            "cv": 0.7622177966491771,
+            "plan_after": [
+              {
+                "id": 4,
+                "parent": 0,
+                "depth": 0,
+                "detail": "SEARCH orders USING COVERING INDEX idx_orders_user_id_created_at_total_cents_cov (user_id=?)"
+              }
+            ],
+            "findings_after": [],
+            "note": null
+          },
+          {
+            "candidate": {
+              "table": "orders",
+              "columns": [
+                "user_id",
+                "created_at"
+              ],
+              "where": null,
+              "kind": "composite",
+              "name": "idx_orders_user_id_created_at",
+              "rationale": "Composite index: equality/join on user_id; ordered by created_at."
+            },
+            "status": "alternative",
+            "round": 1,
+            "used_index": true,
+            "baseline_ms": 11.806752999973469,
+            "after_ms": 0.028958000029888353,
+            "speedup": 407.7199042678152,
+            "build_ms": 229.00501799995254,
+            "size_bytes": 6762496,
+            "write_overhead": 4.163412854038171,
+            "results_match": true,
+            "cv": 0.3876342262599727,
+            "plan_after": [
+              {
+                "id": 5,
+                "parent": 0,
+                "depth": 0,
+                "detail": "SEARCH orders USING INDEX idx_orders_user_id_created_at (user_id=?)"
+              }
+            ],
+            "findings_after": [],
+            "note": "Also works, but another index delivers more benefit for less cost."
+          },
+          {
+            "candidate": {
+              "table": "orders",
+              "columns": [
+                "user_id"
+              ],
+              "where": null,
+              "kind": "single",
+              "name": "idx_orders_user_id",
+              "rationale": "Direct lookup on orders.user_id."
+            },
+            "status": "alternative",
+            "round": 1,
+            "used_index": true,
+            "baseline_ms": 11.806752999973469,
+            "after_ms": 0.11699499998485408,
+            "speedup": 100.91673149708916,
+            "build_ms": 185.56627400005254,
+            "size_bytes": 3436544,
+            "write_overhead": 1.2102216660898673,
+            "results_match": true,
+            "cv": 0.15973370744252757,
+            "plan_after": [
+              {
+                "id": 5,
+                "parent": 0,
+                "depth": 0,
+                "detail": "SEARCH orders USING INDEX idx_orders_user_id (user_id=?)"
+              },
+              {
+                "id": 21,
+                "parent": 0,
+                "depth": 0,
+                "detail": "USE TEMP B-TREE FOR ORDER BY"
+              }
+            ],
+            "findings_after": [
+              {
+                "kind": "temp_sort",
+                "severity": "medium",
+                "table": null,
+                "message": "Rows are sorted in a temporary structure."
+              }
+            ],
+            "note": "Replaced by idx_orders_user_id_created_at_total_cents_cov, which starts with the same columns."
+          },
+          {
+            "candidate": {
+              "table": "orders",
+              "columns": [
+                "created_at"
+              ],
+              "where": null,
+              "kind": "single",
+              "name": "idx_orders_created_at",
+              "rationale": "Direct lookup on orders.created_at."
+            },
+            "status": "too_small_gain",
+            "round": 1,
+            "used_index": true,
+            "baseline_ms": 11.806752999973469,
+            "after_ms": 19.059305000041604,
+            "speedup": 0.6194744771620841,
+            "build_ms": 201.95978100002776,
+            "size_bytes": 5705728,
+            "write_overhead": 2.0819191018532313,
+            "results_match": true,
+            "cv": 0.12549689802773675,
+            "plan_after": [
+              {
+                "id": 5,
+                "parent": 0,
+                "depth": 0,
+                "detail": "SCAN orders USING INDEX idx_orders_created_at"
+              }
+            ],
+            "findings_after": [],
+            "note": "Gain below the 1.25x threshold."
+          }
+        ]
+      },
+      {
+        "id": "b02",
+        "title": "Pending orders this quarter",
+        "sql": "SELECT id, user_id, total_cents FROM orders WHERE status = 'pending' AND created_at >= '2025-10-01'",
+        "status": "optimized",
+        "message": "1 index recommended: 17 ms to 4.2 ms.",
+        "baseline_ms": 17.236647000004268,
+        "final_ms": 4.156927000053656,
+        "speedup": 4.146487778058596,
+        "rows_returned": 2045,
+        "plan_before": [
+          {
+            "id": 2,
+            "parent": 0,
+            "depth": 0,
+            "detail": "SCAN orders"
+          }
+        ],
+        "plan_after": [
+          {
+            "id": 3,
+            "parent": 0,
+            "depth": 0,
+            "detail": "SEARCH orders USING INDEX idx_orders_created_at_where_status_pending (created_at>?)"
+          }
+        ],
+        "findings_before": [
+          {
+            "kind": "full_scan",
+            "severity": "high",
+            "table": "orders",
+            "message": "Full scan of orders (300,000 rows)."
+          }
+        ],
+        "findings_after": [],
+        "recommendations": [
+          {
+            "rank": 1,
+            "candidate": {
+              "table": "orders",
+              "columns": [
+                "created_at"
+              ],
+              "where": "status = 'pending'",
+              "kind": "partial",
+              "name": "idx_orders_created_at_where_status_pending",
+              "rationale": "Indexes only rows where status = 'pending' (about 8% of the table)."
+            },
+            "baseline_ms": 17.236647000004268,
+            "after_ms": 4.156927000053656,
+            "speedup": 4.146487778058596,
+            "size_bytes": 454656,
+            "build_ms": 28.43481200000042,
+            "write_overhead": 0.5593397758840043,
+            "score": 1.57,
+            "confidence": "high",
+            "explanation": "Replaces a full scan of orders with a direct search on (created_at). It only covers rows where status = 'pending', which keeps it small. Measured from 17 ms to 4.2 ms (4.1x faster). Costs 444 KB of disk and makes inserts about 56% slower.",
+            "create_sql": "CREATE INDEX idx_orders_created_at_where_status_pending ON orders (created_at) WHERE status = 'pending'",
+            "rollback_sql": "DROP INDEX IF EXISTS idx_orders_created_at_where_status_pending"
+          }
+        ],
+        "tested": [
+          {
+            "candidate": {
+              "table": "orders",
+              "columns": [
+                "created_at"
+              ],
+              "where": "status = 'pending'",
+              "kind": "partial",
+              "name": "idx_orders_created_at_where_status_pending",
+              "rationale": "Indexes only rows where status = 'pending' (about 8% of the table)."
+            },
+            "status": "recommended",
+            "round": 1,
+            "used_index": true,
+            "baseline_ms": 17.236647000004268,
+            "after_ms": 4.156927000053656,
+            "speedup": 4.146487778058596,
+            "build_ms": 28.43481200000042,
+            "size_bytes": 454656,
+            "write_overhead": 0.5593397758840043,
+            "results_match": true,
+            "cv": 0.1923316267601465,
+            "plan_after": [
+              {
+                "id": 3,
+                "parent": 0,
+                "depth": 0,
+                "detail": "SEARCH orders USING INDEX idx_orders_created_at_where_status_pending (created_at>?)"
+              }
+            ],
+            "findings_after": [],
+            "note": null
+          },
+          {
+            "candidate": {
+              "table": "orders",
+              "columns": [
+                "status",
+                "created_at",
+                "user_id",
+                "total_cents"
+              ],
+              "where": null,
+              "kind": "covering",
+              "name": "idx_orders_status_created_at_user_id_total_cents_cov",
+              "rationale": "Answers the query from the index alone, with no table lookups."
+            },
+            "status": "alternative",
+            "round": 1,
+            "used_index": true,
+            "baseline_ms": 17.236647000004268,
+            "after_ms": 1.7991219999657915,
+            "speedup": 9.580588198205572,
+            "build_ms": 431.4495989999614,
+            "size_bytes": 10829824,
+            "write_overhead": 6.604726455188679,
+            "results_match": true,
+            "cv": 0.02040875701023566,
+            "plan_after": [
+              {
+                "id": 2,
+                "parent": 0,
+                "depth": 0,
+                "detail": "SEARCH orders USING COVERING INDEX idx_orders_status_created_at_user_id_total_cents_cov (status=? AND created_at>?)"
+              }
+            ],
+            "findings_after": [],
+            "note": "Also works, but another index delivers more benefit for less cost."
+          },
+          {
+            "candidate": {
+              "table": "orders",
+              "columns": [
+                "status",
+                "created_at"
+              ],
+              "where": null,
+              "kind": "composite",
+              "name": "idx_orders_status_created_at",
+              "rationale": "Composite index: equality/join on status; range on created_at."
+            },
+            "status": "alternative",
+            "round": 1,
+            "used_index": true,
+            "baseline_ms": 17.236647000004268,
+            "after_ms": 3.011865000075886,
+            "speedup": 5.72291487153972,
+            "build_ms": 317.5388079999948,
+            "size_bytes": 8601600,
+            "write_overhead": 5.069303819336271,
+            "results_match": true,
+            "cv": 0.06910231695017272,
+            "plan_after": [
+              {
+                "id": 3,
+                "parent": 0,
+                "depth": 0,
+                "detail": "SEARCH orders USING INDEX idx_orders_status_created_at (status=? AND created_at>?)"
+              }
+            ],
+            "findings_after": [],
+            "note": "Also works, but another index delivers more benefit for less cost."
+          },
+          {
+            "candidate": {
+              "table": "orders",
+              "columns": [
+                "status"
+              ],
+              "where": null,
+              "kind": "single",
+              "name": "idx_orders_status",
+              "rationale": "Direct lookup on orders.status."
+            },
+            "status": "alternative",
+            "round": 1,
+            "used_index": true,
+            "baseline_ms": 17.236647000004268,
+            "after_ms": 11.284105999948224,
+            "speedup": 1.527515516079285,
+            "build_ms": 179.63279499997498,
+            "size_bytes": 5263360,
+            "write_overhead": 0.5087902795299097,
+            "results_match": true,
+            "cv": 0.03568442026435689,
+            "plan_after": [
+              {
+                "id": 3,
+                "parent": 0,
+                "depth": 0,
+                "detail": "SEARCH orders USING INDEX idx_orders_status (status=?)"
+              }
+            ],
+            "findings_after": [],
+            "note": "Also works, but another index delivers more benefit for less cost."
+          },
+          {
+            "candidate": {
+              "table": "orders",
+              "columns": [
+                "created_at"
+              ],
+              "where": null,
+              "kind": "single",
+              "name": "idx_orders_created_at",
+              "rationale": "Direct lookup on orders.created_at."
+            },
+            "status": "too_small_gain",
+            "round": 1,
+            "used_index": true,
+            "baseline_ms": 17.236647000004268,
+            "after_ms": 15.379390000020976,
+            "speedup": 1.120762722057296,
+            "build_ms": 178.17738700000518,
+            "size_bytes": 5705728,
+            "write_overhead": 4.119104863916085,
+            "results_match": true,
+            "cv": 0.28224592367564105,
+            "plan_after": [
+              {
+                "id": 3,
+                "parent": 0,
+                "depth": 0,
+                "detail": "SEARCH orders USING INDEX idx_orders_created_at (created_at>?)"
+              }
+            ],
+            "findings_after": [],
+            "note": "Gain below the 1.25x threshold."
+          }
+        ]
+      },
+      {
+        "id": "b03",
+        "title": "Order line items",
+        "sql": "SELECT oi.id, p.name, oi.quantity FROM order_items oi JOIN products p ON p.id = oi.product_id WHERE oi.order_id = 123456",
+        "status": "optimized",
+        "message": "1 index recommended: 19 ms to 0.01 ms.",
+        "baseline_ms": 18.781229999945026,
+        "final_ms": 0.008633000106783584,
+        "speedup": 2175.5160161746358,
+        "rows_returned": 2,
+        "plan_before": [
+          {
+            "id": 3,
+            "parent": 0,
+            "depth": 0,
+            "detail": "SCAN oi"
+          },
+          {
+            "id": 7,
+            "parent": 0,
+            "depth": 0,
+            "detail": "SEARCH p USING INTEGER PRIMARY KEY (rowid=?)"
+          }
+        ],
+        "plan_after": [
+          {
+            "id": 4,
+            "parent": 0,
+            "depth": 0,
+            "detail": "SEARCH oi USING INDEX idx_order_items_order_id (order_id=?)"
+          },
+          {
+            "id": 9,
+            "parent": 0,
+            "depth": 0,
+            "detail": "SEARCH p USING INTEGER PRIMARY KEY (rowid=?)"
+          }
+        ],
+        "findings_before": [
+          {
+            "kind": "full_scan",
+            "severity": "medium",
+            "table": "oi",
+            "message": "Full scan of oi."
+          }
+        ],
+        "findings_after": [],
+        "recommendations": [
+          {
+            "rank": 1,
+            "candidate": {
+              "table": "order_items",
+              "columns": [
+                "order_id"
+              ],
+              "where": null,
+              "kind": "single",
+              "name": "idx_order_items_order_id",
+              "rationale": "Direct lookup on order_items.order_id."
+            },
+            "baseline_ms": 18.781229999945026,
+            "after_ms": 0.008633000106783584,
+            "speedup": 2175.5160161746358,
+            "size_bytes": 5943296,
+            "build_ms": 279.12598099999286,
+            "write_overhead": 5.547610996536946,
+            "score": 3.302,
+            "confidence": "high",
+            "explanation": "Lets SQLite find the needed order_items rows through (order_id). Measured from 19 ms to 0.01 ms (2,176x faster). Costs 5.7 MB of disk and makes inserts about 555% slower.",
+            "create_sql": "CREATE INDEX idx_order_items_order_id ON order_items (order_id)",
+            "rollback_sql": "DROP INDEX IF EXISTS idx_order_items_order_id"
+          }
+        ],
+        "tested": [
+          {
+            "candidate": {
+              "table": "order_items",
+              "columns": [
+                "order_id"
+              ],
+              "where": null,
+              "kind": "single",
+              "name": "idx_order_items_order_id",
+              "rationale": "Direct lookup on order_items.order_id."
+            },
+            "status": "recommended",
+            "round": 1,
+            "used_index": true,
+            "baseline_ms": 18.781229999945026,
+            "after_ms": 0.008633000106783584,
+            "speedup": 2175.5160161746358,
+            "build_ms": 279.12598099999286,
+            "size_bytes": 5943296,
+            "write_overhead": 5.547610996536946,
+            "results_match": true,
+            "cv": 0.14106792839926344,
+            "plan_after": [
+              {
+                "id": 4,
+                "parent": 0,
+                "depth": 0,
+                "detail": "SEARCH oi USING INDEX idx_order_items_order_id (order_id=?)"
+              },
+              {
+                "id": 9,
+                "parent": 0,
+                "depth": 0,
+                "detail": "SEARCH p USING INTEGER PRIMARY KEY (rowid=?)"
+              }
+            ],
+            "findings_after": [],
+            "note": null
+          },
+          {
+            "candidate": {
+              "table": "order_items",
+              "columns": [
+                "order_id",
+                "product_id",
+                "quantity"
+              ],
+              "where": null,
+              "kind": "covering",
+              "name": "idx_order_items_order_id_product_id_quantity_cov",
+              "rationale": "Answers the query from the index alone, with no table lookups."
+            },
+            "status": "alternative",
+            "round": 1,
+            "used_index": true,
+            "baseline_ms": 18.781229999945026,
+            "after_ms": 0.009092000027521863,
+            "speedup": 2065.6874112509304,
+            "build_ms": 332.6636479999934,
+            "size_bytes": 8339456,
+            "write_overhead": 4.123505511243299,
+            "results_match": true,
+            "cv": 0.20546619837607658,
+            "plan_after": [
+              {
+                "id": 3,
+                "parent": 0,
+                "depth": 0,
+                "detail": "SEARCH oi USING COVERING INDEX idx_order_items_order_id_product_id_quantity_cov (order_id=?)"
+              },
+              {
+                "id": 7,
+                "parent": 0,
+                "depth": 0,
+                "detail": "SEARCH p USING INTEGER PRIMARY KEY (rowid=?)"
+              }
+            ],
+            "findings_after": [],
+            "note": "Also works, but another index delivers more benefit for less cost."
+          },
+          {
+            "candidate": {
+              "table": "order_items",
+              "columns": [
+                "order_id",
+                "product_id"
+              ],
+              "where": null,
+              "kind": "composite",
+              "name": "idx_order_items_order_id_product_id",
+              "rationale": "Composite index: equality/join on order_id, product_id."
+            },
+            "status": "alternative",
+            "round": 1,
+            "used_index": true,
+            "baseline_ms": 18.781229999945026,
+            "after_ms": 0.013410000065050554,
+            "speedup": 1400.53914309017,
+            "build_ms": 374.23812299994097,
+            "size_bytes": 7434240,
+            "write_overhead": 9.721968260149364,
+            "results_match": true,
+            "cv": 0.13394732225450226,
+            "plan_after": [
+              {
+                "id": 4,
+                "parent": 0,
+                "depth": 0,
+                "detail": "SEARCH oi USING INDEX idx_order_items_order_id_product_id (order_id=?)"
+              },
+              {
+                "id": 9,
+                "parent": 0,
+                "depth": 0,
+                "detail": "SEARCH p USING INTEGER PRIMARY KEY (rowid=?)"
+              }
+            ],
+            "findings_after": [],
+            "note": "Also works, but another index delivers more benefit for less cost."
+          },
+          {
+            "candidate": {
+              "table": "order_items",
+              "columns": [
+                "product_id"
+              ],
+              "where": null,
+              "kind": "single",
+              "name": "idx_order_items_product_id",
+              "rationale": "Direct lookup on order_items.product_id."
+            },
+            "status": "too_small_gain",
+            "round": 1,
+            "used_index": true,
+            "baseline_ms": 18.781229999945026,
+            "after_ms": 285.55888800008233,
+            "speedup": 0.06577007681840956,
+            "build_ms": 310.2754870000126,
+            "size_bytes": 5472256,
+            "write_overhead": 5.2725680155730945,
+            "results_match": true,
+            "cv": 0.037504977491164826,
+            "plan_after": [
+              {
+                "id": 4,
+                "parent": 0,
+                "depth": 0,
+                "detail": "SCAN p"
+              },
+              {
+                "id": 6,
+                "parent": 0,
+                "depth": 0,
+                "detail": "SEARCH oi USING INDEX idx_order_items_product_id (product_id=?)"
+              }
+            ],
+            "findings_after": [
+              {
+                "kind": "full_scan",
+                "severity": "medium",
+                "table": "p",
+                "message": "Full scan of p."
+              }
+            ],
+            "note": "Gain below the 1.25x threshold."
+          }
+        ]
+      },
+      {
+        "id": "b04",
+        "title": "Login by email",
+        "sql": "SELECT id, name, plan FROM users WHERE email = 'user77777@example.com'",
+        "status": "optimized",
+        "message": "1 index recommended: 3.7 ms to 0.01 ms.",
+        "baseline_ms": 3.7387720000197078,
+        "final_ms": 0.010753000083241204,
+        "speedup": 347.69571013457625,
+        "rows_returned": 1,
+        "plan_before": [
+          {
+            "id": 2,
+            "parent": 0,
+            "depth": 0,
+            "detail": "SCAN users"
+          }
+        ],
+        "plan_after": [
+          {
+            "id": 3,
+            "parent": 0,
+            "depth": 0,
+            "detail": "SEARCH users USING INDEX idx_users_email (email=?)"
+          }
+        ],
+        "findings_before": [
+          {
+            "kind": "full_scan",
+            "severity": "high",
+            "table": "users",
+            "message": "Full scan of users (100,000 rows)."
+          }
+        ],
+        "findings_after": [],
+        "recommendations": [
+          {
+            "rank": 1,
+            "candidate": {
+              "table": "users",
+              "columns": [
+                "email"
+              ],
+              "where": null,
+              "kind": "single",
+              "name": "idx_users_email",
+              "rationale": "Direct lookup on users.email."
+            },
+            "baseline_ms": 3.7387720000197078,
+            "after_ms": 0.010753000083241204,
+            "speedup": 347.69571013457625,
+            "size_bytes": 2977792,
+            "build_ms": 53.88924399994721,
+            "write_overhead": 1.8392930317778902,
+            "score": 4.022,
+            "confidence": "high",
+            "explanation": "Replaces a full scan of users with a direct search on (email). Measured from 3.7 ms to 0.01 ms (348x faster). Costs 2.8 MB of disk and makes inserts about 184% slower.",
+            "create_sql": "CREATE INDEX idx_users_email ON users (email)",
+            "rollback_sql": "DROP INDEX IF EXISTS idx_users_email"
+          }
+        ],
+        "tested": [
+          {
+            "candidate": {
+              "table": "users",
+              "columns": [
+                "email"
+              ],
+              "where": null,
+              "kind": "single",
+              "name": "idx_users_email",
+              "rationale": "Direct lookup on users.email."
+            },
+            "status": "recommended",
+            "round": 1,
+            "used_index": true,
+            "baseline_ms": 3.7387720000197078,
+            "after_ms": 0.010753000083241204,
+            "speedup": 347.69571013457625,
+            "build_ms": 53.88924399994721,
+            "size_bytes": 2977792,
+            "write_overhead": 1.8392930317778902,
+            "results_match": true,
+            "cv": 0.10794779944281074,
+            "plan_after": [
+              {
+                "id": 3,
+                "parent": 0,
+                "depth": 0,
+                "detail": "SEARCH users USING INDEX idx_users_email (email=?)"
+              }
+            ],
+            "findings_after": [],
+            "note": null
+          },
+          {
+            "candidate": {
+              "table": "users",
+              "columns": [
+                "email",
+                "name",
+                "plan"
+              ],
+              "where": null,
+              "kind": "covering",
+              "name": "idx_users_email_name_plan_cov",
+              "rationale": "Answers the query from the index alone, with no table lookups."
+            },
+            "status": "alternative",
+            "round": 1,
+            "used_index": true,
+            "baseline_ms": 3.7387720000197078,
+            "after_ms": 0.006471999995483202,
+            "speedup": 577.6841784037377,
+            "build_ms": 59.51045699998758,
+            "size_bytes": 4595712,
+            "write_overhead": 4.712647913256346,
+            "results_match": true,
+            "cv": 0.10770926447500306,
+            "plan_after": [
+              {
+                "id": 2,
+                "parent": 0,
+                "depth": 0,
+                "detail": "SEARCH users USING COVERING INDEX idx_users_email_name_plan_cov (email=?)"
+              }
+            ],
+            "findings_after": [],
+            "note": "Also works, but another index delivers more benefit for less cost."
+          }
+        ]
+      },
+      {
+        "id": "b05",
+        "title": "Product rating summary",
+        "sql": "SELECT AVG(rating), COUNT(*) FROM reviews WHERE product_id = 7",
+        "status": "optimized",
+        "message": "1 index recommended: 3.0 ms to 0.01 ms.",
+        "baseline_ms": 3.0266320000009728,
+        "final_ms": 0.009930000032909447,
+        "speedup": 304.7967764320523,
+        "rows_returned": 1,
+        "plan_before": [
+          {
+            "id": 3,
+            "parent": 0,
+            "depth": 0,
+            "detail": "SCAN reviews"
+          }
+        ],
+        "plan_after": [
+          {
+            "id": 3,
+            "parent": 0,
+            "depth": 0,
+            "detail": "SEARCH reviews USING COVERING INDEX idx_reviews_product_id_rating_cov (product_id=?)"
+          }
+        ],
+        "findings_before": [
+          {
+            "kind": "full_scan",
+            "severity": "high",
+            "table": "reviews",
+            "message": "Full scan of reviews (100,000 rows)."
+          }
+        ],
+        "findings_after": [],
+        "recommendations": [
+          {
+            "rank": 1,
+            "candidate": {
+              "table": "reviews",
+              "columns": [
+                "product_id",
+                "rating"
+              ],
+              "where": null,
+              "kind": "covering",
+              "name": "idx_reviews_product_id_rating_cov",
+              "rationale": "Answers the query from the index alone, with no table lookups."
+            },
+            "baseline_ms": 3.0266320000009728,
+            "after_ms": 0.009930000032909447,
+            "speedup": 304.7967764320523,
+            "size_bytes": 1269760,
+            "build_ms": 52.3273070000414,
+            "write_overhead": 1.5256719903158522,
+            "score": 4.487,
+            "confidence": "high",
+            "explanation": "Replaces a full scan of reviews with a direct search on (product_id, rating). The index holds every column the query reads, so the table is not touched. Measured from 3.0 ms to 0.01 ms (305x faster). Costs 1.2 MB of disk and makes inserts about 153% slower.",
+            "create_sql": "CREATE INDEX idx_reviews_product_id_rating_cov ON reviews (product_id, rating)",
+            "rollback_sql": "DROP INDEX IF EXISTS idx_reviews_product_id_rating_cov"
+          }
+        ],
+        "tested": [
+          {
+            "candidate": {
+              "table": "reviews",
+              "columns": [
+                "product_id",
+                "rating"
+              ],
+              "where": null,
+              "kind": "covering",
+              "name": "idx_reviews_product_id_rating_cov",
+              "rationale": "Answers the query from the index alone, with no table lookups."
+            },
+            "status": "recommended",
+            "round": 1,
+            "used_index": true,
+            "baseline_ms": 3.0266320000009728,
+            "after_ms": 0.009930000032909447,
+            "speedup": 304.7967764320523,
+            "build_ms": 52.3273070000414,
+            "size_bytes": 1269760,
+            "write_overhead": 1.5256719903158522,
+            "results_match": true,
+            "cv": 0.08114759242323262,
+            "plan_after": [
+              {
+                "id": 3,
+                "parent": 0,
+                "depth": 0,
+                "detail": "SEARCH reviews USING COVERING INDEX idx_reviews_product_id_rating_cov (product_id=?)"
+              }
+            ],
+            "findings_after": [],
+            "note": null
+          },
+          {
+            "candidate": {
+              "table": "reviews",
+              "columns": [
+                "product_id"
+              ],
+              "where": null,
+              "kind": "single",
+              "name": "idx_reviews_product_id",
+              "rationale": "Direct lookup on reviews.product_id."
+            },
+            "status": "alternative",
+            "round": 1,
+            "used_index": true,
+            "baseline_ms": 3.0266320000009728,
+            "after_ms": 0.02220000010311196,
+            "speedup": 136.3347741415868,
+            "build_ms": 50.99598499998592,
+            "size_bytes": 1069056,
+            "write_overhead": 2.4006244032767112,
+            "results_match": true,
+            "cv": 0.35871801334763137,
+            "plan_after": [
+              {
+                "id": 4,
+                "parent": 0,
+                "depth": 0,
+                "detail": "SEARCH reviews USING INDEX idx_reviews_product_id (product_id=?)"
+              }
+            ],
+            "findings_after": [],
+            "note": "Also works, but another index delivers more benefit for less cost."
+          }
+        ]
+      },
+      {
+        "id": "b06",
+        "title": "Bulk purchases of a product",
+        "sql": "SELECT order_id, quantity FROM order_items WHERE product_id = 1 AND quantity >= 4",
+        "status": "optimized",
+        "message": "1 index recommended: 16 ms to 0.31 ms.",
+        "baseline_ms": 16.19851399993877,
+        "final_ms": 0.31211200007419393,
+        "speedup": 51.8996834344342,
+        "rows_returned": 463,
+        "plan_before": [
+          {
+            "id": 2,
+            "parent": 0,
+            "depth": 0,
+            "detail": "SCAN order_items"
+          }
+        ],
+        "plan_after": [
+          {
+            "id": 2,
+            "parent": 0,
+            "depth": 0,
+            "detail": "SEARCH order_items USING COVERING INDEX idx_order_items_product_id_quantity_order_id_cov (product_id=? AND quantity>?)"
+          }
+        ],
+        "findings_before": [
+          {
+            "kind": "full_scan",
+            "severity": "high",
+            "table": "order_items",
+            "message": "Full scan of order_items (500,000 rows)."
+          }
+        ],
+        "findings_after": [],
+        "recommendations": [
+          {
+            "rank": 1,
+            "candidate": {
+              "table": "order_items",
+              "columns": [
+                "product_id",
+                "quantity",
+                "order_id"
+              ],
+              "where": null,
+              "kind": "covering",
+              "name": "idx_order_items_product_id_quantity_order_id_cov",
+              "rationale": "Answers the query from the index alone, with no table lookups."
+            },
+            "baseline_ms": 16.19851399993877,
+            "after_ms": 0.31211200007419393,
+            "speedup": 51.8996834344342,
+            "size_bytes": 8339456,
+            "build_ms": 362.5959620000003,
+            "write_overhead": 7.392829986127809,
+            "score": 1.627,
+            "confidence": "high",
+            "explanation": "Replaces a full scan of order_items with a direct search on (product_id, quantity, order_id). The index holds every column the query reads, so the table is not touched. Measured from 16 ms to 0.31 ms (52x faster). Costs 8.0 MB of disk and makes inserts about 739% slower.",
+            "create_sql": "CREATE INDEX idx_order_items_product_id_quantity_order_id_cov ON order_items (product_id, quantity, order_id)",
+            "rollback_sql": "DROP INDEX IF EXISTS idx_order_items_product_id_quantity_order_id_cov"
+          }
+        ],
+        "tested": [
+          {
+            "candidate": {
+              "table": "order_items",
+              "columns": [
+                "product_id",
+                "quantity",
+                "order_id"
+              ],
+              "where": null,
+              "kind": "covering",
+              "name": "idx_order_items_product_id_quantity_order_id_cov",
+              "rationale": "Answers the query from the index alone, with no table lookups."
+            },
+            "status": "recommended",
+            "round": 1,
+            "used_index": true,
+            "baseline_ms": 16.19851399993877,
+            "after_ms": 0.31211200007419393,
+            "speedup": 51.8996834344342,
+            "build_ms": 362.5959620000003,
+            "size_bytes": 8339456,
+            "write_overhead": 7.392829986127809,
+            "results_match": true,
+            "cv": 0.1591861473633971,
+            "plan_after": [
+              {
+                "id": 2,
+                "parent": 0,
+                "depth": 0,
+                "detail": "SEARCH order_items USING COVERING INDEX idx_order_items_product_id_quantity_order_id_cov (product_id=? AND quantity>?)"
+              }
+            ],
+            "findings_after": [],
+            "note": null
+          },
+          {
+            "candidate": {
+              "table": "order_items",
+              "columns": [
+                "product_id",
+                "quantity"
+              ],
+              "where": null,
+              "kind": "composite",
+              "name": "idx_order_items_product_id_quantity",
+              "rationale": "Composite index: equality/join on product_id; range on quantity."
+            },
+            "status": "alternative",
+            "round": 1,
+            "used_index": true,
+            "baseline_ms": 16.19851399993877,
+            "after_ms": 0.4515669999136662,
+            "speedup": 35.87178426022211,
+            "build_ms": 348.48902800001724,
+            "size_bytes": 6381568,
+            "write_overhead": 7.382776117687609,
+            "results_match": true,
+            "cv": 0.14866829491454026,
+            "plan_after": [
+              {
+                "id": 3,
+                "parent": 0,
+                "depth": 0,
+                "detail": "SEARCH order_items USING INDEX idx_order_items_product_id_quantity (product_id=? AND quantity>?)"
+              }
+            ],
+            "findings_after": [],
+            "note": "Also works, but another index delivers more benefit for less cost."
+          },
+          {
+            "candidate": {
+              "table": "order_items",
+              "columns": [
+                "product_id"
+              ],
+              "where": null,
+              "kind": "single",
+              "name": "idx_order_items_product_id",
+              "rationale": "Direct lookup on order_items.product_id."
+            },
+            "status": "alternative",
+            "round": 1,
+            "used_index": true,
+            "baseline_ms": 16.19851399993877,
+            "after_ms": 1.1696949999304707,
+            "speedup": 13.84849383890813,
+            "build_ms": 288.22947300000124,
+            "size_bytes": 5472256,
+            "write_overhead": 5.213593724941044,
+            "results_match": true,
+            "cv": 0.08302322009382208,
+            "plan_after": [
+              {
+                "id": 3,
+                "parent": 0,
+                "depth": 0,
+                "detail": "SEARCH order_items USING INDEX idx_order_items_product_id (product_id=?)"
+              }
+            ],
+            "findings_after": [],
+            "note": "Also works, but another index delivers more benefit for less cost."
+          },
+          {
+            "candidate": {
+              "table": "order_items",
+              "columns": [
+                "quantity"
+              ],
+              "where": null,
+              "kind": "single",
+              "name": "idx_order_items_quantity",
+              "rationale": "Direct lookup on order_items.quantity."
+            },
+            "status": "too_small_gain",
+            "round": 1,
+            "used_index": true,
+            "baseline_ms": 16.19851399993877,
+            "after_ms": 47.35398000002533,
+            "speedup": 0.34207291551692387,
+            "build_ms": 175.27983100001165,
+            "size_bytes": 4898816,
+            "write_overhead": 0.9020785334620267,
+            "results_match": true,
+            "cv": 0.15613903758385775,
+            "plan_after": [
+              {
+                "id": 3,
+                "parent": 0,
+                "depth": 0,
+                "detail": "SEARCH order_items USING INDEX idx_order_items_quantity (quantity>?)"
+              }
+            ],
+            "findings_after": [],
+            "note": "Gain below the 1.25x threshold."
+          }
+        ]
+      },
+      {
+        "id": "b07",
+        "title": "Q1 revenue by customer",
+        "sql": "SELECT user_id, SUM(total_cents) AS spend FROM orders WHERE created_at BETWEEN '2025-01-01' AND '2025-03-31' AND status = 'delivered' GROUP BY user_id ORDER BY spend DESC LIMIT 10",
+        "status": "optimized",
+        "message": "1 index recommended: 26 ms to 7.2 ms.",
+        "baseline_ms": 26.10600399998475,
+        "final_ms": 7.172373000003063,
+        "speedup": 3.639800105205572,
+        "rows_returned": 10,
+        "plan_before": [
+          {
+            "id": 8,
+            "parent": 0,
+            "depth": 0,
+            "detail": "SCAN orders"
+          },
+          {
+            "id": 15,
+            "parent": 0,
+            "depth": 0,
+            "detail": "USE TEMP B-TREE FOR GROUP BY"
+          },
+          {
+            "id": 57,
+            "parent": 0,
+            "depth": 0,
+            "detail": "USE TEMP B-TREE FOR ORDER BY"
+          }
+        ],
+        "plan_after": [
+          {
+            "id": 8,
+            "parent": 0,
+            "depth": 0,
+            "detail": "SEARCH orders USING COVERING INDEX idx_orders_status_created_at_user_id_total_cents_cov (status=? AND created_at>? AND created_at<?)"
+          },
+          {
+            "id": 14,
+            "parent": 0,
+            "depth": 0,
+            "detail": "USE TEMP B-TREE FOR GROUP BY"
+          },
+          {
+            "id": 56,
+            "parent": 0,
+            "depth": 0,
+            "detail": "USE TEMP B-TREE FOR ORDER BY"
+          }
+        ],
+        "findings_before": [
+          {
+            "kind": "full_scan",
+            "severity": "high",
+            "table": "orders",
+            "message": "Full scan of orders (300,000 rows)."
+          },
+          {
+            "kind": "temp_group",
+            "severity": "medium",
+            "table": null,
+            "message": "Groups are built in a temporary structure."
+          },
+          {
+            "kind": "temp_sort",
+            "severity": "medium",
+            "table": null,
+            "message": "Rows are sorted in a temporary structure."
+          }
+        ],
+        "findings_after": [
+          {
+            "kind": "temp_group",
+            "severity": "medium",
+            "table": null,
+            "message": "Groups are built in a temporary structure."
+          },
+          {
+            "kind": "temp_sort",
+            "severity": "medium",
+            "table": null,
+            "message": "Rows are sorted in a temporary structure."
+          }
+        ],
+        "recommendations": [
+          {
+            "rank": 1,
+            "candidate": {
+              "table": "orders",
+              "columns": [
+                "status",
+                "created_at",
+                "user_id",
+                "total_cents"
+              ],
+              "where": null,
+              "kind": "covering",
+              "name": "idx_orders_status_created_at_user_id_total_cents_cov",
+              "rationale": "Answers the query from the index alone, with no table lookups."
+            },
+            "baseline_ms": 26.10600399998475,
+            "after_ms": 7.172373000003063,
+            "speedup": 3.639800105205572,
+            "size_bytes": 10829824,
+            "build_ms": 403.23892399999295,
+            "write_overhead": 6.703748534755252,
+            "score": 0.51,
+            "confidence": "high",
+            "explanation": "Replaces a full scan of orders with a direct search on (status, created_at, user_id, total_cents). The index holds every column the query reads, so the table is not touched. Measured from 26 ms to 7.2 ms (3.6x faster). Costs 10.3 MB of disk and makes inserts about 670% slower.",
+            "create_sql": "CREATE INDEX idx_orders_status_created_at_user_id_total_cents_cov ON orders (status, created_at, user_id, total_cents)",
+            "rollback_sql": "DROP INDEX IF EXISTS idx_orders_status_created_at_user_id_total_cents_cov"
+          }
+        ],
+        "tested": [
+          {
+            "candidate": {
+              "table": "orders",
+              "columns": [
+                "status",
+                "created_at",
+                "user_id",
+                "total_cents"
+              ],
+              "where": null,
+              "kind": "covering",
+              "name": "idx_orders_status_created_at_user_id_total_cents_cov",
+              "rationale": "Answers the query from the index alone, with no table lookups."
+            },
+            "status": "recommended",
+            "round": 1,
+            "used_index": true,
+            "baseline_ms": 26.10600399998475,
+            "after_ms": 7.172373000003063,
+            "speedup": 3.639800105205572,
+            "build_ms": 403.23892399999295,
+            "size_bytes": 10829824,
+            "write_overhead": 6.703748534755252,
+            "results_match": true,
+            "cv": 0.020855350567769226,
+            "plan_after": [
+              {
+                "id": 8,
+                "parent": 0,
+                "depth": 0,
+                "detail": "SEARCH orders USING COVERING INDEX idx_orders_status_created_at_user_id_total_cents_cov (status=? AND created_at>? AND created_at<?)"
+              },
+              {
+                "id": 14,
+                "parent": 0,
+                "depth": 0,
+                "detail": "USE TEMP B-TREE FOR GROUP BY"
+              },
+              {
+                "id": 56,
+                "parent": 0,
+                "depth": 0,
+                "detail": "USE TEMP B-TREE FOR ORDER BY"
+              }
+            ],
+            "findings_after": [
+              {
+                "kind": "temp_group",
+                "severity": "medium",
+                "table": null,
+                "message": "Groups are built in a temporary structure."
+              },
+              {
+                "kind": "temp_sort",
+                "severity": "medium",
+                "table": null,
+                "message": "Rows are sorted in a temporary structure."
+              }
+            ],
+            "note": null
+          },
+          {
+            "candidate": {
+              "table": "orders",
+              "columns": [
+                "status",
+                "created_at"
+              ],
+              "where": null,
+              "kind": "composite",
+              "name": "idx_orders_status_created_at",
+              "rationale": "Composite index: equality/join on status; range on created_at."
+            },
+            "status": "too_small_gain",
+            "round": 1,
+            "used_index": true,
+            "baseline_ms": 26.10600399998475,
+            "after_ms": 16.7653229999587,
+            "speedup": 1.5571429193490076,
+            "build_ms": 284.5828790000269,
+            "size_bytes": 8601600,
+            "write_overhead": 5.5620454427826695,
+            "results_match": true,
+            "cv": 0.023293428157472807,
+            "plan_after": [
+              {
+                "id": 9,
+                "parent": 0,
+                "depth": 0,
+                "detail": "SEARCH orders USING INDEX idx_orders_status_created_at (status=? AND created_at>? AND created_at<?)"
+              },
+              {
+                "id": 16,
+                "parent": 0,
+                "depth": 0,
+                "detail": "USE TEMP B-TREE FOR GROUP BY"
+              },
+              {
+                "id": 58,
+                "parent": 0,
+                "depth": 0,
+                "detail": "USE TEMP B-TREE FOR ORDER BY"
+              }
+            ],
+            "findings_after": [
+              {
+                "kind": "temp_group",
+                "severity": "medium",
+                "table": null,
+                "message": "Groups are built in a temporary structure."
+              },
+              {
+                "kind": "temp_sort",
+                "severity": "medium",
+                "table": null,
+                "message": "Rows are sorted in a temporary structure."
+              }
+            ],
+            "note": "Gain does not justify the write overhead."
+          },
+          {
+            "candidate": {
+              "table": "orders",
+              "columns": [
+                "created_at"
+              ],
+              "where": null,
+              "kind": "single",
+              "name": "idx_orders_created_at",
+              "rationale": "Direct lookup on orders.created_at."
+            },
+            "status": "too_small_gain",
+            "round": 1,
+            "used_index": true,
+            "baseline_ms": 26.10600399998475,
+            "after_ms": 21.430838000014774,
+            "speedup": 1.2181513387375125,
+            "build_ms": 182.86080500001844,
+            "size_bytes": 5705728,
+            "write_overhead": 3.9744266272271704,
+            "results_match": true,
+            "cv": 0.015678827115177575,
+            "plan_after": [
+              {
+                "id": 9,
+                "parent": 0,
+                "depth": 0,
+                "detail": "SEARCH orders USING INDEX idx_orders_created_at (created_at>? AND created_at<?)"
+              },
+              {
+                "id": 17,
+                "parent": 0,
+                "depth": 0,
+                "detail": "USE TEMP B-TREE FOR GROUP BY"
+              },
+              {
+                "id": 59,
+                "parent": 0,
+                "depth": 0,
+                "detail": "USE TEMP B-TREE FOR ORDER BY"
+              }
+            ],
+            "findings_after": [
+              {
+                "kind": "temp_group",
+                "severity": "medium",
+                "table": null,
+                "message": "Groups are built in a temporary structure."
+              },
+              {
+                "kind": "temp_sort",
+                "severity": "medium",
+                "table": null,
+                "message": "Rows are sorted in a temporary structure."
+              }
+            ],
+            "note": "Gain below the 1.25x threshold."
+          },
+          {
+            "candidate": {
+              "table": "orders",
+              "columns": [
+                "status"
+              ],
+              "where": null,
+              "kind": "single",
+              "name": "idx_orders_status",
+              "rationale": "Direct lookup on orders.status."
+            },
+            "status": "too_small_gain",
+            "round": 1,
+            "used_index": true,
+            "baseline_ms": 26.10600399998475,
+            "after_ms": 42.47102299996186,
+            "speedup": 0.6146780123475762,
+            "build_ms": 150.99293800005853,
+            "size_bytes": 5263360,
+            "write_overhead": 0.9927893573855522,
+            "results_match": true,
+            "cv": 0.009736902969788321,
+            "plan_after": [
+              {
+                "id": 9,
+                "parent": 0,
+                "depth": 0,
+                "detail": "SEARCH orders USING INDEX idx_orders_status (status=?)"
+              },
+              {
+                "id": 17,
+                "parent": 0,
+                "depth": 0,
+                "detail": "USE TEMP B-TREE FOR GROUP BY"
+              },
+              {
+                "id": 59,
+                "parent": 0,
+                "depth": 0,
+                "detail": "USE TEMP B-TREE FOR ORDER BY"
+              }
+            ],
+            "findings_after": [
+              {
+                "kind": "temp_group",
+                "severity": "medium",
+                "table": null,
+                "message": "Groups are built in a temporary structure."
+              },
+              {
+                "kind": "temp_sort",
+                "severity": "medium",
+                "table": null,
+                "message": "Rows are sorted in a temporary structure."
+              }
+            ],
+            "note": "Gain below the 1.25x threshold."
+          },
+          {
+            "candidate": {
+              "table": "orders",
+              "columns": [
+                "user_id"
+              ],
+              "where": null,
+              "kind": "single",
+              "name": "idx_orders_user_id",
+              "rationale": "Direct lookup on orders.user_id."
+            },
+            "status": "too_small_gain",
+            "round": 1,
+            "used_index": true,
+            "baseline_ms": 26.10600399998475,
+            "after_ms": 177.35567099998661,
+            "speedup": 0.147195766860969,
+            "build_ms": 159.80197099997895,
+            "size_bytes": 3436544,
+            "write_overhead": 2.859697087301489,
+            "results_match": true,
+            "cv": 0.07988452006036732,
+            "plan_after": [
+              {
+                "id": 9,
+                "parent": 0,
+                "depth": 0,
+                "detail": "SCAN orders USING INDEX idx_orders_user_id"
+              },
+              {
+                "id": 50,
+                "parent": 0,
+                "depth": 0,
+                "detail": "USE TEMP B-TREE FOR ORDER BY"
+              }
+            ],
+            "findings_after": [
+              {
+                "kind": "temp_sort",
+                "severity": "medium",
+                "table": null,
+                "message": "Rows are sorted in a temporary structure."
+              }
+            ],
+            "note": "Gain below the 1.25x threshold."
+          }
+        ]
+      },
+      {
+        "id": "b08",
+        "title": "Refunded orders with customer",
+        "sql": "SELECT u.email, o.total_cents FROM orders o JOIN users u ON u.id = o.user_id WHERE o.status = 'refunded' AND o.created_at >= '2025-09-01'",
+        "status": "optimized",
+        "message": "1 index recommended: 18 ms to 2.7 ms.",
+        "baseline_ms": 17.884599000012713,
+        "final_ms": 2.7324449999923672,
+        "speedup": 6.545273189419246,
+        "rows_returned": 1372,
+        "plan_before": [
+          {
+            "id": 3,
+            "parent": 0,
+            "depth": 0,
+            "detail": "SCAN o"
+          },
+          {
+            "id": 9,
+            "parent": 0,
+            "depth": 0,
+            "detail": "SEARCH u USING INTEGER PRIMARY KEY (rowid=?)"
+          }
+        ],
+        "plan_after": [
+          {
+            "id": 4,
+            "parent": 0,
+            "depth": 0,
+            "detail": "SEARCH o USING INDEX idx_orders_created_at_where_status_refunded (created_at>?)"
+          },
+          {
+            "id": 8,
+            "parent": 0,
+            "depth": 0,
+            "detail": "SEARCH u USING INTEGER PRIMARY KEY (rowid=?)"
+          }
+        ],
+        "findings_before": [
+          {
+            "kind": "full_scan",
+            "severity": "medium",
+            "table": "o",
+            "message": "Full scan of o."
+          }
+        ],
+        "findings_after": [],
+        "recommendations": [
+          {
+            "rank": 1,
+            "candidate": {
+              "table": "orders",
+              "columns": [
+                "created_at"
+              ],
+              "where": "status = 'refunded'",
+              "kind": "partial",
+              "name": "idx_orders_created_at_where_status_refunded",
+              "rationale": "Indexes only rows where status = 'refunded' (about 4% of the table)."
+            },
+            "baseline_ms": 17.884599000012713,
+            "after_ms": 2.7324449999923672,
+            "speedup": 6.545273189419246,
+            "size_bytes": 233472,
+            "build_ms": 22.33623600000101,
+            "write_overhead": 0.08191566228191197,
+            "score": 2.569,
+            "confidence": "high",
+            "explanation": "Lets SQLite find the needed orders rows through (created_at). It only covers rows where status = 'refunded', which keeps it small. Measured from 18 ms to 2.7 ms (6.5x faster). Costs 228 KB of disk and makes inserts about 8% slower.",
+            "create_sql": "CREATE INDEX idx_orders_created_at_where_status_refunded ON orders (created_at) WHERE status = 'refunded'",
+            "rollback_sql": "DROP INDEX IF EXISTS idx_orders_created_at_where_status_refunded"
+          }
+        ],
+        "tested": [
+          {
+            "candidate": {
+              "table": "orders",
+              "columns": [
+                "created_at"
+              ],
+              "where": "status = 'refunded'",
+              "kind": "partial",
+              "name": "idx_orders_created_at_where_status_refunded",
+              "rationale": "Indexes only rows where status = 'refunded' (about 4% of the table)."
+            },
+            "status": "recommended",
+            "round": 1,
+            "used_index": true,
+            "baseline_ms": 17.884599000012713,
+            "after_ms": 2.7324449999923672,
+            "speedup": 6.545273189419246,
+            "build_ms": 22.33623600000101,
+            "size_bytes": 233472,
+            "write_overhead": 0.08191566228191197,
+            "results_match": true,
+            "cv": 0.1562739039045892,
+            "plan_after": [
+              {
+                "id": 4,
+                "parent": 0,
+                "depth": 0,
+                "detail": "SEARCH o USING INDEX idx_orders_created_at_where_status_refunded (created_at>?)"
+              },
+              {
+                "id": 8,
+                "parent": 0,
+                "depth": 0,
+                "detail": "SEARCH u USING INTEGER PRIMARY KEY (rowid=?)"
+              }
+            ],
+            "findings_after": [],
+            "note": null
+          },
+          {
+            "candidate": {
+              "table": "orders",
+              "columns": [
+                "status",
+                "created_at"
+              ],
+              "where": null,
+              "kind": "composite",
+              "name": "idx_orders_status_created_at",
+              "rationale": "Composite index: equality/join on status; range on created_at."
+            },
+            "status": "alternative",
+            "round": 1,
+            "used_index": true,
+            "baseline_ms": 17.884599000012713,
+            "after_ms": 2.4998369999593706,
+            "speedup": 7.154306060876524,
+            "build_ms": 335.55476000003637,
+            "size_bytes": 8601600,
+            "write_overhead": 5.471080973423361,
+            "results_match": true,
+            "cv": 0.07163970779430485,
+            "plan_after": [
+              {
+                "id": 4,
+                "parent": 0,
+                "depth": 0,
+                "detail": "SEARCH o USING INDEX idx_orders_status_created_at (status=? AND created_at>?)"
+              },
+              {
+                "id": 10,
+                "parent": 0,
+                "depth": 0,
+                "detail": "SEARCH u USING INTEGER PRIMARY KEY (rowid=?)"
+              }
+            ],
+            "findings_after": [],
+            "note": "Also works, but another index delivers more benefit for less cost."
+          },
+          {
+            "candidate": {
+              "table": "orders",
+              "columns": [
+                "status",
+                "created_at",
+                "total_cents"
+              ],
+              "where": null,
+              "kind": "covering",
+              "name": "idx_orders_status_created_at_total_cents_cov",
+              "rationale": "Answers the query from the index alone, with no table lookups."
+            },
+            "status": "alternative",
+            "round": 1,
+            "used_index": true,
+            "baseline_ms": 17.884599000012713,
+            "after_ms": 2.5881550000121933,
+            "speedup": 6.910173076932585,
+            "build_ms": 340.01468400003887,
+            "size_bytes": 9768960,
+            "write_overhead": 6.145956261927399,
+            "results_match": true,
+            "cv": 0.06583801789002462,
+            "plan_after": [
+              {
+                "id": 4,
+                "parent": 0,
+                "depth": 0,
+                "detail": "SEARCH o USING INDEX idx_orders_status_created_at_total_cents_cov (status=? AND created_at>?)"
+              },
+              {
+                "id": 10,
+                "parent": 0,
+                "depth": 0,
+                "detail": "SEARCH u USING INTEGER PRIMARY KEY (rowid=?)"
+              }
+            ],
+            "findings_after": [],
+            "note": "Also works, but another index delivers more benefit for less cost."
+          },
+          {
+            "candidate": {
+              "table": "orders",
+              "columns": [
+                "status"
+              ],
+              "where": null,
+              "kind": "single",
+              "name": "idx_orders_status",
+              "rationale": "Direct lookup on orders.status."
+            },
+            "status": "alternative",
+            "round": 1,
+            "used_index": true,
+            "baseline_ms": 17.884599000012713,
+            "after_ms": 6.6790970000738525,
+            "speedup": 2.6776971497516744,
+            "build_ms": 122.30625500001224,
+            "size_bytes": 5263360,
+            "write_overhead": 0.8251534018045293,
+            "results_match": true,
+            "cv": 0.09942710934578503,
+            "plan_after": [
+              {
+                "id": 4,
+                "parent": 0,
+                "depth": 0,
+                "detail": "SEARCH o USING INDEX idx_orders_status (status=?)"
+              },
+              {
+                "id": 11,
+                "parent": 0,
+                "depth": 0,
+                "detail": "SEARCH u USING INTEGER PRIMARY KEY (rowid=?)"
+              }
+            ],
+            "findings_after": [],
+            "note": "Also works, but another index delivers more benefit for less cost."
+          },
+          {
+            "candidate": {
+              "table": "orders",
+              "columns": [
+                "status",
+                "user_id"
+              ],
+              "where": null,
+              "kind": "composite",
+              "name": "idx_orders_status_user_id",
+              "rationale": "Composite index: equality/join on status, user_id."
+            },
+            "status": "too_small_gain",
+            "round": 1,
+            "used_index": true,
+            "baseline_ms": 17.884599000012713,
+            "after_ms": 9.097800000063216,
+            "speedup": 1.9658158016101082,
+            "build_ms": 336.9092070000761,
+            "size_bytes": 6328320,
+            "write_overhead": 4.352952600345954,
+            "results_match": true,
+            "cv": 0.403685938076372,
+            "plan_after": [
+              {
+                "id": 4,
+                "parent": 0,
+                "depth": 0,
+                "detail": "SEARCH o USING INDEX idx_orders_status_user_id (status=?)"
+              },
+              {
+                "id": 11,
+                "parent": 0,
+                "depth": 0,
+                "detail": "SEARCH u USING INTEGER PRIMARY KEY (rowid=?)"
+              }
+            ],
+            "findings_after": [],
+            "note": "Gain does not justify the write overhead."
+          },
+          {
+            "candidate": {
+              "table": "orders",
+              "columns": [
+                "created_at"
+              ],
+              "where": null,
+              "kind": "single",
+              "name": "idx_orders_created_at",
+              "rationale": "Direct lookup on orders.created_at."
+            },
+            "status": "too_small_gain",
+            "round": 1,
+            "used_index": true,
+            "baseline_ms": 17.884599000012713,
+            "after_ms": 19.56563700002789,
+            "speedup": 0.9140821226514229,
+            "build_ms": 192.17582300007052,
+            "size_bytes": 5705728,
+            "write_overhead": 3.871156259527661,
+            "results_match": true,
+            "cv": 0.01580762114466753,
+            "plan_after": [
+              {
+                "id": 4,
+                "parent": 0,
+                "depth": 0,
+                "detail": "SEARCH o USING INDEX idx_orders_created_at (created_at>?)"
+              },
+              {
+                "id": 10,
+                "parent": 0,
+                "depth": 0,
+                "detail": "SEARCH u USING INTEGER PRIMARY KEY (rowid=?)"
+              }
+            ],
+            "findings_after": [],
+            "note": "Gain below the 1.25x threshold."
+          },
+          {
+            "candidate": {
+              "table": "orders",
+              "columns": [
+                "user_id"
+              ],
+              "where": null,
+              "kind": "single",
+              "name": "idx_orders_user_id",
+              "rationale": "Direct lookup on orders.user_id."
+            },
+            "status": "not_used",
+            "round": 2,
+            "used_index": false,
+            "baseline_ms": 2.7324449999923672,
+            "after_ms": null,
+            "speedup": null,
+            "build_ms": 212.28438600007848,
+            "size_bytes": 3436544,
+            "write_overhead": null,
+            "results_match": null,
+            "cv": null,
+            "plan_after": [
+              {
+                "id": 4,
+                "parent": 0,
+                "depth": 0,
+                "detail": "SEARCH o USING INDEX idx_orders_created_at_where_status_refunded (created_at>?)"
+              },
+              {
+                "id": 8,
+                "parent": 0,
+                "depth": 0,
+                "detail": "SEARCH u USING INTEGER PRIMARY KEY (rowid=?)"
+              }
+            ],
+            "findings_after": [],
+            "note": "The query planner ignored this index."
+          }
+        ]
+      },
+      {
+        "id": "b09",
+        "title": "Best sellers this quarter",
+        "sql": "SELECT oi.product_id, SUM(oi.quantity) AS units FROM order_items oi JOIN orders o ON o.id = oi.order_id WHERE o.created_at >= '2025-10-01' GROUP BY oi.product_id ORDER BY units DESC LIMIT 10",
+        "status": "no_improvement",
+        "message": "No candidate reached the 1.25x threshold; the existing indexes are already a good fit.",
+        "baseline_ms": 84.76716899997427,
+        "final_ms": 84.76716899997427,
+        "speedup": 1.0,
+        "rows_returned": 10,
+        "plan_before": [
+          {
+            "id": 9,
+            "parent": 0,
+            "depth": 0,
+            "detail": "SCAN oi"
+          },
+          {
+            "id": 12,
+            "parent": 0,
+            "depth": 0,
+            "detail": "BLOOM FILTER ON o (id=?)"
+          },
+          {
+            "id": 20,
+            "parent": 0,
+            "depth": 0,
+            "detail": "SEARCH o USING INTEGER PRIMARY KEY (rowid=?)"
+          },
+          {
+            "id": 27,
+            "parent": 0,
+            "depth": 0,
+            "detail": "USE TEMP B-TREE FOR GROUP BY"
+          },
+          {
+            "id": 69,
+            "parent": 0,
+            "depth": 0,
+            "detail": "USE TEMP B-TREE FOR ORDER BY"
+          }
+        ],
+        "plan_after": [
+          {
+            "id": 9,
+            "parent": 0,
+            "depth": 0,
+            "detail": "SCAN oi"
+          },
+          {
+            "id": 12,
+            "parent": 0,
+            "depth": 0,
+            "detail": "BLOOM FILTER ON o (id=?)"
+          },
+          {
+            "id": 20,
+            "parent": 0,
+            "depth": 0,
+            "detail": "SEARCH o USING INTEGER PRIMARY KEY (rowid=?)"
+          },
+          {
+            "id": 27,
+            "parent": 0,
+            "depth": 0,
+            "detail": "USE TEMP B-TREE FOR GROUP BY"
+          },
+          {
+            "id": 69,
+            "parent": 0,
+            "depth": 0,
+            "detail": "USE TEMP B-TREE FOR ORDER BY"
+          }
+        ],
+        "findings_before": [
+          {
+            "kind": "full_scan",
+            "severity": "medium",
+            "table": "oi",
+            "message": "Full scan of oi."
+          },
+          {
+            "kind": "temp_group",
+            "severity": "medium",
+            "table": null,
+            "message": "Groups are built in a temporary structure."
+          },
+          {
+            "kind": "temp_sort",
+            "severity": "medium",
+            "table": null,
+            "message": "Rows are sorted in a temporary structure."
+          }
+        ],
+        "findings_after": [
+          {
+            "kind": "full_scan",
+            "severity": "medium",
+            "table": "oi",
+            "message": "Full scan of oi."
+          },
+          {
+            "kind": "temp_group",
+            "severity": "medium",
+            "table": null,
+            "message": "Groups are built in a temporary structure."
+          },
+          {
+            "kind": "temp_sort",
+            "severity": "medium",
+            "table": null,
+            "message": "Rows are sorted in a temporary structure."
+          }
+        ],
+        "recommendations": [],
+        "tested": [
+          {
+            "candidate": {
+              "table": "order_items",
+              "columns": [
+                "order_id",
+                "product_id",
+                "quantity"
+              ],
+              "where": null,
+              "kind": "covering",
+              "name": "idx_order_items_order_id_product_id_quantity_cov",
+              "rationale": "Answers the query from the index alone, with no table lookups."
+            },
+            "status": "too_small_gain",
+            "round": 1,
+            "used_index": true,
+            "baseline_ms": 84.76716899997427,
+            "after_ms": 44.55712599997241,
+            "speedup": 1.9024379848921753,
+            "build_ms": 387.23612700005106,
+            "size_bytes": 8339456,
+            "write_overhead": 8.106608246759707,
+            "results_match": true,
+            "cv": 0.20052476880060613,
+            "plan_after": [
+              {
+                "id": 9,
+                "parent": 0,
+                "depth": 0,
+                "detail": "SCAN o"
+              },
+              {
+                "id": 13,
+                "parent": 0,
+                "depth": 0,
+                "detail": "SEARCH oi USING COVERING INDEX idx_order_items_order_id_product_id_quantity_cov (order_id=?)"
+              },
+              {
+                "id": 17,
+                "parent": 0,
+                "depth": 0,
+                "detail": "USE TEMP B-TREE FOR GROUP BY"
+              },
+              {
+                "id": 60,
+                "parent": 0,
+                "depth": 0,
+                "detail": "USE TEMP B-TREE FOR ORDER BY"
+              }
+            ],
+            "findings_after": [
+              {
+                "kind": "full_scan",
+                "severity": "medium",
+                "table": "o",
+                "message": "Full scan of o."
+              },
+              {
+                "kind": "temp_group",
+                "severity": "medium",
+                "table": null,
+                "message": "Groups are built in a temporary structure."
+              },
+              {
+                "kind": "temp_sort",
+                "severity": "medium",
+                "table": null,
+                "message": "Rows are sorted in a temporary structure."
+              }
+            ],
+            "note": "Gain does not justify the write overhead."
+          },
+          {
+            "candidate": {
+              "table": "order_items",
+              "columns": [
+                "product_id"
+              ],
+              "where": null,
+              "kind": "single",
+              "name": "idx_order_items_product_id",
+              "rationale": "Direct lookup on order_items.product_id."
+            },
+            "status": "too_small_gain",
+            "round": 1,
+            "used_index": true,
+            "baseline_ms": 84.76716899997427,
+            "after_ms": 395.06911000000855,
+            "speedup": 0.21456288749067837,
+            "build_ms": 337.71256099998936,
+            "size_bytes": 5472256,
+            "write_overhead": 7.725741003574367,
+            "results_match": true,
+            "cv": 0.06714074878173244,
+            "plan_after": [
+              {
+                "id": 10,
+                "parent": 0,
+                "depth": 0,
+                "detail": "SCAN oi USING INDEX idx_order_items_product_id"
+              },
+              {
+                "id": 14,
+                "parent": 0,
+                "depth": 0,
+                "detail": "BLOOM FILTER ON o (id=?)"
+              },
+              {
+                "id": 22,
+                "parent": 0,
+                "depth": 0,
+                "detail": "SEARCH o USING INTEGER PRIMARY KEY (rowid=?)"
+              },
+              {
+                "id": 62,
+                "parent": 0,
+                "depth": 0,
+                "detail": "USE TEMP B-TREE FOR ORDER BY"
+              }
+            ],
+            "findings_after": [
+              {
+                "kind": "temp_sort",
+                "severity": "medium",
+                "table": null,
+                "message": "Rows are sorted in a temporary structure."
+              }
+            ],
+            "note": "Gain below the 1.25x threshold."
+          },
+          {
+            "candidate": {
+              "table": "order_items",
+              "columns": [
+                "order_id"
+              ],
+              "where": null,
+              "kind": "single",
+              "name": "idx_order_items_order_id",
+              "rationale": "Composite index: equality/join on order_id."
+            },
+            "status": "not_used",
+            "round": 1,
+            "used_index": false,
+            "baseline_ms": 84.76716899997427,
+            "after_ms": null,
+            "speedup": null,
+            "build_ms": 301.777867999931,
+            "size_bytes": 5943296,
+            "write_overhead": null,
+            "results_match": null,
+            "cv": null,
+            "plan_after": [
+              {
+                "id": 9,
+                "parent": 0,
+                "depth": 0,
+                "detail": "SCAN oi"
+              },
+              {
+                "id": 12,
+                "parent": 0,
+                "depth": 0,
+                "detail": "BLOOM FILTER ON o (id=?)"
+              },
+              {
+                "id": 20,
+                "parent": 0,
+                "depth": 0,
+                "detail": "SEARCH o USING INTEGER PRIMARY KEY (rowid=?)"
+              },
+              {
+                "id": 27,
+                "parent": 0,
+                "depth": 0,
+                "detail": "USE TEMP B-TREE FOR GROUP BY"
+              },
+              {
+                "id": 69,
+                "parent": 0,
+                "depth": 0,
+                "detail": "USE TEMP B-TREE FOR ORDER BY"
+              }
+            ],
+            "findings_after": [
+              {
+                "kind": "full_scan",
+                "severity": "medium",
+                "table": "oi",
+                "message": "Full scan of oi."
+              },
+              {
+                "kind": "temp_group",
+                "severity": "medium",
+                "table": null,
+                "message": "Groups are built in a temporary structure."
+              },
+              {
+                "kind": "temp_sort",
+                "severity": "medium",
+                "table": null,
+                "message": "Rows are sorted in a temporary structure."
+              }
+            ],
+            "note": "The query planner ignored this index."
+          },
+          {
+            "candidate": {
+              "table": "orders",
+              "columns": [
+                "created_at"
+              ],
+              "where": null,
+              "kind": "single",
+              "name": "idx_orders_created_at",
+              "rationale": "Direct lookup on orders.created_at."
+            },
+            "status": "not_used",
+            "round": 1,
+            "used_index": false,
+            "baseline_ms": 84.76716899997427,
+            "after_ms": null,
+            "speedup": null,
+            "build_ms": 204.78753899999447,
+            "size_bytes": 5705728,
+            "write_overhead": null,
+            "results_match": null,
+            "cv": null,
+            "plan_after": [
+              {
+                "id": 9,
+                "parent": 0,
+                "depth": 0,
+                "detail": "SCAN oi"
+              },
+              {
+                "id": 12,
+                "parent": 0,
+                "depth": 0,
+                "detail": "BLOOM FILTER ON o (id=?)"
+              },
+              {
+                "id": 20,
+                "parent": 0,
+                "depth": 0,
+                "detail": "SEARCH o USING INTEGER PRIMARY KEY (rowid=?)"
+              },
+              {
+                "id": 27,
+                "parent": 0,
+                "depth": 0,
+                "detail": "USE TEMP B-TREE FOR GROUP BY"
+              },
+              {
+                "id": 69,
+                "parent": 0,
+                "depth": 0,
+                "detail": "USE TEMP B-TREE FOR ORDER BY"
+              }
+            ],
+            "findings_after": [
+              {
+                "kind": "full_scan",
+                "severity": "medium",
+                "table": "oi",
+                "message": "Full scan of oi."
+              },
+              {
+                "kind": "temp_group",
+                "severity": "medium",
+                "table": null,
+                "message": "Groups are built in a temporary structure."
+              },
+              {
+                "kind": "temp_sort",
+                "severity": "medium",
+                "table": null,
+                "message": "Rows are sorted in a temporary structure."
+              }
+            ],
+            "note": "The query planner ignored this index."
+          }
+        ]
+      },
+      {
+        "id": "b10",
+        "title": "Customers with pending orders",
+        "sql": "SELECT COUNT(*) FROM users u WHERE u.country = 'SG' AND u.plan = 'pro' AND u.created_at >= '2025-06-01' AND EXISTS (SELECT 1 FROM orders o WHERE o.user_id = u.id AND o.status = 'pending')",
+        "status": "optimized",
+        "message": "2 indexes recommended: 3,865 ms to 0.11 ms.",
+        "baseline_ms": 3864.8811589999923,
+        "final_ms": 0.1102889999629042,
+        "speedup": 35043.21519190443,
+        "rows_returned": 1,
+        "plan_before": [
+          {
+            "id": 3,
+            "parent": 0,
+            "depth": 0,
+            "detail": "SCAN u"
+          },
+          {
+            "id": 12,
+            "parent": 0,
+            "depth": 0,
+            "detail": "CORRELATED SCALAR SUBQUERY 1"
+          },
+          {
+            "id": 16,
+            "parent": 12,
+            "depth": 1,
+            "detail": "SCAN o"
+          }
+        ],
+        "plan_after": [
+          {
+            "id": 3,
+            "parent": 0,
+            "depth": 0,
+            "detail": "SEARCH u USING COVERING INDEX idx_users_plan_created_at_where_country_sg (plan=? AND created_at>?)"
+          },
+          {
+            "id": 9,
+            "parent": 0,
+            "depth": 0,
+            "detail": "CORRELATED SCALAR SUBQUERY 1"
+          },
+          {
+            "id": 13,
+            "parent": 9,
+            "depth": 1,
+            "detail": "SEARCH o USING COVERING INDEX idx_orders_user_id_where_status_pending (user_id=?)"
+          }
+        ],
+        "findings_before": [
+          {
+            "kind": "full_scan",
+            "severity": "medium",
+            "table": "u",
+            "message": "Full scan of u."
+          },
+          {
+            "kind": "full_scan",
+            "severity": "medium",
+            "table": "o",
+            "message": "Full scan of o."
+          }
+        ],
+        "findings_after": [],
+        "recommendations": [
+          {
+            "rank": 1,
+            "candidate": {
+              "table": "orders",
+              "columns": [
+                "user_id"
+              ],
+              "where": "status = 'pending'",
+              "kind": "partial",
+              "name": "idx_orders_user_id_where_status_pending",
+              "rationale": "Indexes only rows where status = 'pending' (about 8% of the table)."
+            },
+            "baseline_ms": 3864.8811589999923,
+            "after_ms": 5.286990000058722,
+            "speedup": 731.0173007622608,
+            "size_bytes": 278528,
+            "build_ms": 25.806846000023143,
+            "write_overhead": 0.08037928480134532,
+            "score": 9.001,
+            "confidence": "high",
+            "explanation": "Lets SQLite find the needed orders rows through (user_id). It only covers rows where status = 'pending', which keeps it small. Measured from 3,865 ms to 5.3 ms (731x faster). Costs 272 KB of disk and makes inserts about 8% slower.",
+            "create_sql": "CREATE INDEX idx_orders_user_id_where_status_pending ON orders (user_id) WHERE status = 'pending'",
+            "rollback_sql": "DROP INDEX IF EXISTS idx_orders_user_id_where_status_pending"
+          },
+          {
+            "rank": 2,
+            "candidate": {
+              "table": "users",
+              "columns": [
+                "plan",
+                "created_at"
+              ],
+              "where": "country = 'SG'",
+              "kind": "partial",
+              "name": "idx_users_plan_created_at_where_country_sg",
+              "rationale": "Indexes only rows where country = 'SG' (about 10% of the table)."
+            },
+            "baseline_ms": 6.268427999998494,
+            "after_ms": 0.1102889999629042,
+            "speedup": 56.83638442733985,
+            "size_bytes": 245760,
+            "build_ms": 14.73866900005305,
+            "write_overhead": 0.23189893591506683,
+            "score": 5.155,
+            "confidence": "high",
+            "explanation": "Lets SQLite find the needed users rows through (plan, created_at). It only covers rows where country = 'SG', which keeps it small. Measured from 6.3 ms to 0.11 ms (57x faster). Costs 240 KB of disk and makes inserts about 23% slower.",
+            "create_sql": "CREATE INDEX idx_users_plan_created_at_where_country_sg ON users (plan, created_at) WHERE country = 'SG'",
+            "rollback_sql": "DROP INDEX IF EXISTS idx_users_plan_created_at_where_country_sg"
+          }
+        ],
+        "tested": [
+          {
+            "candidate": {
+              "table": "orders",
+              "columns": [
+                "user_id"
+              ],
+              "where": "status = 'pending'",
+              "kind": "partial",
+              "name": "idx_orders_user_id_where_status_pending",
+              "rationale": "Indexes only rows where status = 'pending' (about 8% of the table)."
+            },
+            "status": "recommended",
+            "round": 1,
+            "used_index": true,
+            "baseline_ms": 3864.8811589999923,
+            "after_ms": 5.286990000058722,
+            "speedup": 731.0173007622608,
+            "build_ms": 25.806846000023143,
+            "size_bytes": 278528,
+            "write_overhead": 0.08037928480134532,
+            "results_match": true,
+            "cv": 0.03141727687106713,
+            "plan_after": [
+              {
+                "id": 3,
+                "parent": 0,
+                "depth": 0,
+                "detail": "SCAN u"
+              },
+              {
+                "id": 12,
+                "parent": 0,
+                "depth": 0,
+                "detail": "CORRELATED SCALAR SUBQUERY 1"
+              },
+              {
+                "id": 16,
+                "parent": 12,
+                "depth": 1,
+                "detail": "SEARCH o USING COVERING INDEX idx_orders_user_id_where_status_pending (user_id=?)"
+              }
+            ],
+            "findings_after": [
+              {
+                "kind": "full_scan",
+                "severity": "medium",
+                "table": "u",
+                "message": "Full scan of u."
+              }
+            ],
+            "note": null
+          },
+          {
+            "candidate": {
+              "table": "users",
+              "columns": [
+                "plan",
+                "created_at"
+              ],
+              "where": "country = 'SG'",
+              "kind": "partial",
+              "name": "idx_users_plan_created_at_where_country_sg",
+              "rationale": "Indexes only rows where country = 'SG' (about 10% of the table)."
+            },
+            "status": "recommended",
+            "round": 1,
+            "used_index": true,
+            "baseline_ms": 3864.8811589999923,
+            "after_ms": 4780.491457000039,
+            "speedup": 0.8084694207204731,
+            "build_ms": 21.444109999947614,
+            "size_bytes": 245760,
+            "write_overhead": 0.3110741906713987,
+            "results_match": true,
+            "cv": 0.022392814226203952,
+            "plan_after": [
+              {
+                "id": 3,
+                "parent": 0,
+                "depth": 0,
+                "detail": "SEARCH u USING COVERING INDEX idx_users_plan_created_at_where_country_sg (plan=? AND created_at>?)"
+              },
+              {
+                "id": 9,
+                "parent": 0,
+                "depth": 0,
+                "detail": "CORRELATED SCALAR SUBQUERY 1"
+              },
+              {
+                "id": 13,
+                "parent": 9,
+                "depth": 1,
+                "detail": "SCAN o"
+              }
+            ],
+            "findings_after": [
+              {
+                "kind": "full_scan",
+                "severity": "medium",
+                "table": "o",
+                "message": "Full scan of o."
+              }
+            ],
+            "note": "Gain below the 1.25x threshold."
+          },
+          {
+            "candidate": {
+              "table": "orders",
+              "columns": [
+                "status",
+                "user_id"
+              ],
+              "where": null,
+              "kind": "composite",
+              "name": "idx_orders_status_user_id",
+              "rationale": "Composite index: equality/join on status, user_id."
+            },
+            "status": "alternative",
+            "round": 1,
+            "used_index": true,
+            "baseline_ms": 3864.8811589999923,
+            "after_ms": 5.213252999965334,
+            "speedup": 741.3569145839828,
+            "build_ms": 297.0382510000036,
+            "size_bytes": 6328320,
+            "write_overhead": 2.5095876463003632,
+            "results_match": true,
+            "cv": 0.041508945425643776,
+            "plan_after": [
+              {
+                "id": 3,
+                "parent": 0,
+                "depth": 0,
+                "detail": "SCAN u"
+              },
+              {
+                "id": 12,
+                "parent": 0,
+                "depth": 0,
+                "detail": "CORRELATED SCALAR SUBQUERY 1"
+              },
+              {
+                "id": 16,
+                "parent": 12,
+                "depth": 1,
+                "detail": "SEARCH o USING COVERING INDEX idx_orders_status_user_id (status=? AND user_id=?)"
+              }
+            ],
+            "findings_after": [
+              {
+                "kind": "full_scan",
+                "severity": "medium",
+                "table": "u",
+                "message": "Full scan of u."
+              }
+            ],
+            "note": "Also works, but another index delivers more benefit for less cost."
+          },
+          {
+            "candidate": {
+              "table": "orders",
+              "columns": [
+                "user_id"
+              ],
+              "where": null,
+              "kind": "single",
+              "name": "idx_orders_user_id",
+              "rationale": "Direct lookup on orders.user_id."
+            },
+            "status": "alternative",
+            "round": 1,
+            "used_index": true,
+            "baseline_ms": 3864.8811589999923,
+            "after_ms": 5.61628799994196,
+            "speedup": 688.1557995316359,
+            "build_ms": 159.23895299999913,
+            "size_bytes": 3436544,
+            "write_overhead": 2.6617039945557726,
+            "results_match": true,
+            "cv": 0.07045463540185233,
+            "plan_after": [
+              {
+                "id": 3,
+                "parent": 0,
+                "depth": 0,
+                "detail": "SCAN u"
+              },
+              {
+                "id": 12,
+                "parent": 0,
+                "depth": 0,
+                "detail": "CORRELATED SCALAR SUBQUERY 1"
+              },
+              {
+                "id": 17,
+                "parent": 12,
+                "depth": 1,
+                "detail": "SEARCH o USING INDEX idx_orders_user_id (user_id=?)"
+              }
+            ],
+            "findings_after": [
+              {
+                "kind": "full_scan",
+                "severity": "medium",
+                "table": "u",
+                "message": "Full scan of u."
+              }
+            ],
+            "note": "Also works, but another index delivers more benefit for less cost."
+          },
+          {
+            "candidate": {
+              "table": "orders",
+              "columns": [
+                "status"
+              ],
+              "where": null,
+              "kind": "single",
+              "name": "idx_orders_status",
+              "rationale": "Direct lookup on orders.status."
+            },
+            "status": "too_small_gain",
+            "round": 1,
+            "used_index": true,
+            "baseline_ms": 3864.8811589999923,
+            "after_ms": 1909.4862019999255,
+            "speedup": 2.024042464906035,
+            "build_ms": 123.15157200009708,
+            "size_bytes": 5263360,
+            "write_overhead": 1.0444497844341698,
+            "results_match": true,
+            "cv": 0.04199424712905663,
+            "plan_after": [
+              {
+                "id": 3,
+                "parent": 0,
+                "depth": 0,
+                "detail": "SCAN u"
+              },
+              {
+                "id": 12,
+                "parent": 0,
+                "depth": 0,
+                "detail": "CORRELATED SCALAR SUBQUERY 1"
+              },
+              {
+                "id": 17,
+                "parent": 12,
+                "depth": 1,
+                "detail": "SEARCH o USING INDEX idx_orders_status (status=?)"
+              }
+            ],
+            "findings_after": [
+              {
+                "kind": "full_scan",
+                "severity": "medium",
+                "table": "u",
+                "message": "Full scan of u."
+              }
+            ],
+            "note": "Gain does not justify the write overhead."
+          },
+          {
+            "candidate": {
+              "table": "users",
+              "columns": [
+                "plan"
+              ],
+              "where": null,
+              "kind": "single",
+              "name": "idx_users_plan",
+              "rationale": "Direct lookup on users.plan."
+            },
+            "status": "too_small_gain",
+            "round": 3,
+            "used_index": true,
+            "baseline_ms": 0.1102889999629042,
+            "after_ms": 0.09841500002494286,
+            "speedup": 1.1206523389214238,
+            "build_ms": 45.15560699996968,
+            "size_bytes": 1294336,
+            "write_overhead": 1.0818640869016658,
+            "results_match": true,
+            "cv": 0.07546646902254643,
+            "plan_after": [
+              {
+                "id": 3,
+                "parent": 0,
+                "depth": 0,
+                "detail": "SEARCH u USING COVERING INDEX idx_users_plan_created_at_where_country_sg (plan=? AND created_at>?)"
+              },
+              {
+                "id": 9,
+                "parent": 0,
+                "depth": 0,
+                "detail": "CORRELATED SCALAR SUBQUERY 1"
+              },
+              {
+                "id": 13,
+                "parent": 9,
+                "depth": 1,
+                "detail": "SEARCH o USING COVERING INDEX idx_orders_user_id_where_status_pending (user_id=?)"
+              }
+            ],
+            "findings_after": [],
+            "note": "Gain below the 1.25x threshold."
+          },
+          {
+            "candidate": {
+              "table": "users",
+              "columns": [
+                "country",
+                "plan"
+              ],
+              "where": null,
+              "kind": "composite",
+              "name": "idx_users_country_plan",
+              "rationale": "Composite index: equality/join on country, plan."
+            },
+            "status": "too_small_gain",
+            "round": 1,
+            "used_index": true,
+            "baseline_ms": 3864.8811589999923,
+            "after_ms": 4743.214796000075,
+            "speedup": 0.8148231368858151,
+            "build_ms": 70.77767700002369,
+            "size_bytes": 1597440,
+            "write_overhead": 1.4343212999008466,
+            "results_match": true,
+            "cv": 0.01945475588050425,
+            "plan_after": [
+              {
+                "id": 4,
+                "parent": 0,
+                "depth": 0,
+                "detail": "SEARCH u USING INDEX idx_users_country_plan (country=? AND plan=?)"
+              },
+              {
+                "id": 13,
+                "parent": 0,
+                "depth": 0,
+                "detail": "CORRELATED SCALAR SUBQUERY 1"
+              },
+              {
+                "id": 17,
+                "parent": 13,
+                "depth": 1,
+                "detail": "SCAN o"
+              }
+            ],
+            "findings_after": [
+              {
+                "kind": "full_scan",
+                "severity": "medium",
+                "table": "o",
+                "message": "Full scan of o."
+              }
+            ],
+            "note": "Gain below the 1.25x threshold."
+          },
+          {
+            "candidate": {
+              "table": "users",
+              "columns": [
+                "country",
+                "plan",
+                "created_at"
+              ],
+              "where": null,
+              "kind": "composite",
+              "name": "idx_users_country_plan_created_at",
+              "rationale": "Composite index: equality/join on country, plan; range on created_at."
+            },
+            "status": "too_small_gain",
+            "round": 1,
+            "used_index": true,
+            "baseline_ms": 3864.8811589999923,
+            "after_ms": 4890.145692000033,
+            "speedup": 0.790340697890186,
+            "build_ms": 143.50054999999884,
+            "size_bytes": 2703360,
+            "write_overhead": 4.413325218046837,
+            "results_match": true,
+            "cv": 0.014229351414501134,
+            "plan_after": [
+              {
+                "id": 3,
+                "parent": 0,
+                "depth": 0,
+                "detail": "SEARCH u USING COVERING INDEX idx_users_country_plan_created_at (country=? AND plan=? AND created_at>?)"
+              },
+              {
+                "id": 10,
+                "parent": 0,
+                "depth": 0,
+                "detail": "CORRELATED SCALAR SUBQUERY 1"
+              },
+              {
+                "id": 14,
+                "parent": 10,
+                "depth": 1,
+                "detail": "SCAN o"
+              }
+            ],
+            "findings_after": [
+              {
+                "kind": "full_scan",
+                "severity": "medium",
+                "table": "o",
+                "message": "Full scan of o."
+              }
+            ],
+            "note": "Gain below the 1.25x threshold."
+          },
+          {
+            "candidate": {
+              "table": "users",
+              "columns": [
+                "country"
+              ],
+              "where": null,
+              "kind": "single",
+              "name": "idx_users_country",
+              "rationale": "Direct lookup on users.country."
+            },
+            "status": "too_small_gain",
+            "round": 1,
+            "used_index": true,
+            "baseline_ms": 3864.8811589999923,
+            "after_ms": 4919.624510999938,
+            "speedup": 0.7856049075205611,
+            "build_ms": 40.596652999965954,
+            "size_bytes": 1073152,
+            "write_overhead": 1.3718156060058544,
+            "results_match": true,
+            "cv": 0.01712933143038095,
+            "plan_after": [
+              {
+                "id": 4,
+                "parent": 0,
+                "depth": 0,
+                "detail": "SEARCH u USING INDEX idx_users_country (country=?)"
+              },
+              {
+                "id": 14,
+                "parent": 0,
+                "depth": 0,
+                "detail": "CORRELATED SCALAR SUBQUERY 1"
+              },
+              {
+                "id": 18,
+                "parent": 14,
+                "depth": 1,
+                "detail": "SCAN o"
+              }
+            ],
+            "findings_after": [
+              {
+                "kind": "full_scan",
+                "severity": "medium",
+                "table": "o",
+                "message": "Full scan of o."
+              }
+            ],
+            "note": "Gain below the 1.25x threshold."
+          },
+          {
+            "candidate": {
+              "table": "users",
+              "columns": [
+                "created_at"
+              ],
+              "where": null,
+              "kind": "single",
+              "name": "idx_users_created_at",
+              "rationale": "Direct lookup on users.created_at."
+            },
+            "status": "too_small_gain",
+            "round": 1,
+            "used_index": true,
+            "baseline_ms": 3864.8811589999923,
+            "after_ms": 4951.498839999999,
+            "speedup": 0.7805477258275987,
+            "build_ms": 56.150693999938994,
+            "size_bytes": 1884160,
+            "write_overhead": 1.852478809833388,
+            "results_match": true,
+            "cv": 0.04057330744297042,
+            "plan_after": [
+              {
+                "id": 4,
+                "parent": 0,
+                "depth": 0,
+                "detail": "SEARCH u USING INDEX idx_users_created_at (created_at>?)"
+              },
+              {
+                "id": 13,
+                "parent": 0,
+                "depth": 0,
+                "detail": "CORRELATED SCALAR SUBQUERY 1"
+              },
+              {
+                "id": 17,
+                "parent": 13,
+                "depth": 1,
+                "detail": "SCAN o"
+              }
+            ],
+            "findings_after": [
+              {
+                "kind": "full_scan",
+                "severity": "medium",
+                "table": "o",
+                "message": "Full scan of o."
+              }
+            ],
+            "note": "Gain below the 1.25x threshold."
+          },
+          {
+            "candidate": {
+              "table": "users",
+              "columns": [
+                "country",
+                "created_at"
+              ],
+              "where": "plan = 'pro'",
+              "kind": "partial",
+              "name": "idx_users_country_created_at_where_plan_pro",
+              "rationale": "Indexes only rows where plan = 'pro' (about 14% of the table)."
+            },
+            "status": "too_small_gain",
+            "round": 1,
+            "used_index": true,
+            "baseline_ms": 3864.8811589999923,
+            "after_ms": 5033.948699999996,
+            "speedup": 0.7677633184859423,
+            "build_ms": 17.676303000030202,
+            "size_bytes": 315392,
+            "write_overhead": 0.34419201902106006,
+            "results_match": true,
+            "cv": 0.031437452759702,
+            "plan_after": [
+              {
+                "id": 3,
+                "parent": 0,
+                "depth": 0,
+                "detail": "SEARCH u USING COVERING INDEX idx_users_country_created_at_where_plan_pro (country=? AND created_at>?)"
+              },
+              {
+                "id": 9,
+                "parent": 0,
+                "depth": 0,
+                "detail": "CORRELATED SCALAR SUBQUERY 1"
+              },
+              {
+                "id": 13,
+                "parent": 9,
+                "depth": 1,
+                "detail": "SCAN o"
+              }
+            ],
+            "findings_after": [
+              {
+                "kind": "full_scan",
+                "severity": "medium",
+                "table": "o",
+                "message": "Full scan of o."
+              }
+            ],
+            "note": "Gain below the 1.25x threshold."
+          }
+        ]
+      }
+    ],
+    "total_baseline_ms": 4064.4274789998462,
+    "total_final_ms": 99.31386600032965,
+    "headline": "Customers with pending orders: 3,865 ms to 0.11 ms (35,043x faster)",
+    "migration_sql": "-- QueryDoctor migration, generated 2026-10-28 02:52 UTC\n-- Every index below was validated on a sandbox copy of the database.\n-- Review, then run inside your normal deployment process.\n\n-- Customer order history: 12 ms to 0.03 ms (363x), +7.6 MB, confidence medium\nCREATE INDEX IF NOT EXISTS idx_orders_user_id_created_at_total_cents_cov ON orders (user_id, created_at, total_cents);\n\n-- Pending orders this quarter: 17 ms to 4.2 ms (4.1x), +444 KB, confidence high\nCREATE INDEX IF NOT EXISTS idx_orders_created_at_where_status_pending ON orders (created_at) WHERE status = 'pending';\n\n-- Order line items: 19 ms to 0.01 ms (2,176x), +5.7 MB, confidence high\nCREATE INDEX IF NOT EXISTS idx_order_items_order_id ON order_items (order_id);\n\n-- Login by email: 3.7 ms to 0.01 ms (348x), +2.8 MB, confidence high\nCREATE INDEX IF NOT EXISTS idx_users_email ON users (email);\n\n-- Product rating summary: 3.0 ms to 0.01 ms (305x), +1.2 MB, confidence high\nCREATE INDEX IF NOT EXISTS idx_reviews_product_id_rating_cov ON reviews (product_id, rating);\n\n-- Bulk purchases of a product: 16 ms to 0.31 ms (52x), +8.0 MB, confidence high\nCREATE INDEX IF NOT EXISTS idx_order_items_product_id_quantity_order_id_cov ON order_items (product_id, quantity, order_id);\n\n-- Q1 revenue by customer: 26 ms to 7.2 ms (3.6x), +10.3 MB, confidence high\nCREATE INDEX IF NOT EXISTS idx_orders_status_created_at_user_id_total_cents_cov ON orders (status, created_at, user_id, total_cents);\n\n-- Refunded orders with customer: 18 ms to 2.7 ms (6.5x), +228 KB, confidence high\nCREATE INDEX IF NOT EXISTS idx_orders_created_at_where_status_refunded ON orders (created_at) WHERE status = 'refunded';\n\n-- Customers with pending orders: 3,865 ms to 5.3 ms (731x), +272 KB, confidence high\nCREATE INDEX IF NOT EXISTS idx_orders_user_id_where_status_pending ON orders (user_id) WHERE status = 'pending';\n\n-- Customers with pending orders: 6.3 ms to 0.11 ms (57x), +240 KB, confidence high\nCREATE INDEX IF NOT EXISTS idx_users_plan_created_at_where_country_sg ON users (plan, created_at) WHERE country = 'SG';\n",
+    "rollback_sql": "-- QueryDoctor rollback, generated 2026-10-28 02:52 UTC\n\nDROP INDEX IF EXISTS idx_orders_user_id_created_at_total_cents_cov;\nDROP INDEX IF EXISTS idx_orders_created_at_where_status_pending;\nDROP INDEX IF EXISTS idx_order_items_order_id;\nDROP INDEX IF EXISTS idx_users_email;\nDROP INDEX IF EXISTS idx_reviews_product_id_rating_cov;\nDROP INDEX IF EXISTS idx_order_items_product_id_quantity_order_id_cov;\nDROP INDEX IF EXISTS idx_orders_status_created_at_user_id_total_cents_cov;\nDROP INDEX IF EXISTS idx_orders_created_at_where_status_refunded;\nDROP INDEX IF EXISTS idx_orders_user_id_where_status_pending;\nDROP INDEX IF EXISTS idx_users_plan_created_at_where_country_sg;\n"
+  }
+}

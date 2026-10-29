@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<meta name="description" content="QueryDoctor is a SQL index advisor that proves every recommendation by measuring it. Explore real benchmark results.">
+<meta property="og:title" content="QueryDoctor: an index advisor that proves its recommendations">
+<meta property="og:description" content="Candidate indexes are tested on a sandbox copy of the database. Explore real before/after results on a one million row dataset.">
+<meta property="og:type" content="website">
+<title>QueryDoctor</title>
+<link rel="icon" href="src/querydoctor/web/static/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="src/querydoctor/web/static/styles.css">
+</head>
+<body>
+<div id="app" aria-live="polite"></div>
+<noscript>QueryDoctor needs JavaScript to render its dashboard.</noscript>
+<script>window.QUERYDOCTOR_STATIC = true;</script>
+<script type="module" src="src/querydoctor/web/static/app.js"></script>
+</body>
+</html>
